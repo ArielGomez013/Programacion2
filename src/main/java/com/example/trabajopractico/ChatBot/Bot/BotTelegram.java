@@ -9,12 +9,7 @@ import com.example.trabajopractico.ChatBot.Historial.HistorialDeConversacion;
 import com.example.trabajopractico.ChatBot.Historial.Usuario;
 import java.io.File;
 //import java.io.FileOutputStream;
-import java.io.ByteArrayInputStream; // Necesitas este import
 import java.io.IOException;
-import org.springframework.util.StreamUtils; // Necesitas este import si no lo tienes
-import java.nio.file.Files;
-import java.io.IOException;
-import java.io.InputStream;
 //import java.net.URL;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -26,6 +21,7 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.core.io.ClassPathResource;
 //import org.springframework.core.io.ClassPathResource;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 /**
@@ -126,51 +122,41 @@ public class BotTelegram extends TelegramLongPollingBot {
     String textoLower = texto.toLowerCase();
 
 
+        for (Map.Entry<String, String> e : escudos.entrySet()) {
+            if (textoLower.contains(e.getKey())) {
+                
+                try {
+                    //Obtener el recurso del sistema de archivos o classpath
+                    ClassPathResource resource = new ClassPathResource("escudos/" + e.getValue());
+                    
+                    if (!resource.exists()) {
+                        enviarTexto(chatId, "No se encontró el archivo del escudo: " + e.getValue());
+                        return;
+                    }
+                    
+                    // Obtener el archivo
+                    File file = resource.getFile();
 
-    for (Map.Entry<String, String> e : escudos.entrySet()) {
-        if (textoLower.contains(e.getKey())) {
-            
-            // Usamos try-with-resources para el InputStream
-            try (InputStream inputStream = getClass().getClassLoader()
-                    .getResourceAsStream("/escudos/" + e.getValue())) {
+                    SendPhoto photo = new SendPhoto();
+                    photo.setChatId(String.valueOf(chatId));
+                    // Usa el constructor de InputFile con el objeto File
+                    photo.setPhoto(new InputFile(file, e.getValue()));
+                    photo.setCaption("Escudo de " + capitalize(e.getKey()));
 
-                if (inputStream == null) {
-                    enviarTexto(chatId, "❌ No se encontró el recurso del escudo dentro del JAR.");
-                    return;
+                    // Envia la foto
+                    execute(photo);
+
+                } catch (TelegramApiException ex) {
+                    enviarTexto(chatId, "Error de Telegram al subir el escudo de " + capitalize(e.getKey()) + ".");
+                    ex.printStackTrace();
+                } catch (IOException ex) {
+                    enviarTexto(chatId, "Error de I/O al acceder al archivo del escudo (local): " + capitalize(e.getKey()));
+                    ex.printStackTrace();
                 }
-                
-                // 1. Cargar todo el contenido del InputStream a un array de bytes
-                byte[] fileContent = StreamUtils.copyToByteArray(inputStream);
-                
-                // 2. Crear un nuevo InputStream a partir del array de bytes (en memoria)
-                // Esto permite que Telegram lea el contenido sin depender del disco
-                ByteArrayInputStream bais = new ByteArrayInputStream(fileContent);
-
-                // 3. Preparar el mensaje SendPhoto
-                SendPhoto photo = new SendPhoto();
-                photo.setChatId(String.valueOf(chatId));
-                // Usamos el constructor de InputFile con el nuevo stream en memoria
-                photo.setPhoto(new InputFile(bais, e.getValue())); 
-                photo.setCaption("Escudo de " + capitalize(e.getKey()));
-
-                // 4. Enviamos la foto
-                execute(photo);
-                
-                // Cerramos el ByteArrayInputStream (aunque se cierra al salir del try, es buena práctica)
-                bais.close();
-
-            } catch (TelegramApiException ex) {
-                enviarTexto(chatId, "⚠️ Error de Telegram al subir el escudo de " + capitalize(e.getKey()) + ".");
-                ex.printStackTrace();
-            } catch (IOException ex) {
-                enviarTexto(chatId, "⚠️ Error de I/O al cargar el recurso a memoria: " + capitalize(e.getKey()));
-                ex.printStackTrace();
+                return;
             }
-            return;
         }
     }
-}
-
     
 /*
     String textoLower = texto.toLowerCase();
