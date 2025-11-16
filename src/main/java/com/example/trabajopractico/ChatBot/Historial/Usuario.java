@@ -16,12 +16,13 @@ import java.util.Map;
  */
 @Component
 public class Usuario {
+
     private static final String FILE = "usuarios.json";
     private final ObjectMapper mapper = new ObjectMapper();
     private Map<Long, String> usuarios = new HashMap<>();
 
-    public Usuario(){
-        cargar(); 
+    public Usuario() {
+        cargar(); // carga segura al iniciar
     }
 
     public void guardarUsuario(Long chatId, String nombre) {
@@ -37,19 +38,19 @@ public class Usuario {
         try {
             mapper.writerWithDefaultPrettyPrinter().writeValue(new File(FILE), usuarios);
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("No se pudo guardar usuarios: " + e.getMessage());
         }
     }
 
     private void cargar() {
-        try {
-            File f = new File(FILE);
-            if (f.exists()) {
+        File f = new File(FILE);
+        if (f.exists()) {
+            try {
                 usuarios = mapper.readValue(f, new TypeReference<Map<Long, String>>() {});
+            } catch (IOException e) {
+                System.out.println("No se pudo cargar usuarios, inicializando vacío");
+                usuarios = new HashMap<>();
             }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 }
-

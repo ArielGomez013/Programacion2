@@ -19,13 +19,13 @@ import java.util.Map;
  */
 @Component
 public class HistorialDeConversacion {
-    
+
     private static final String FILE = "historial.json";
     private final ObjectMapper mapper = new ObjectMapper();
     private Map<Long, List<String>> historial = new HashMap<>();
 
-    public HistorialDeConversacion(){
-        cargar(); 
+    public HistorialDeConversacion() {
+        cargar(); // carga segura al iniciar
     }
 
     public void agregar(Long chatId, String mensaje) {
@@ -41,19 +41,19 @@ public class HistorialDeConversacion {
         try {
             mapper.writerWithDefaultPrettyPrinter().writeValue(new File(FILE), historial);
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("No se pudo guardar historial: " + e.getMessage());
         }
     }
 
     private void cargar() {
-        try {
-            File f = new File(FILE);
-            if (f.exists()) {
+        File f = new File(FILE);
+        if (f.exists()) {
+            try {
                 historial = mapper.readValue(f, new TypeReference<Map<Long, List<String>>>() {});
+            } catch (IOException e) {
+                System.out.println("No se pudo cargar historial, inicializando vacío");
+                historial = new HashMap<>();
             }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
-    
 }
