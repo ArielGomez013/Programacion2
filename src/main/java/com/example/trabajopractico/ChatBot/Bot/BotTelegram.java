@@ -123,25 +123,33 @@ public class BotTelegram extends TelegramLongPollingBot {
     for (Map.Entry<String, String> e : escudos.entrySet()) {
         if (textoLower.contains(e.getKey())) {
             try {
-                // Se lee la imagen desde resources/escudos/
-                ClassPathResource recurso = new ClassPathResource("escudos/" + e.getValue());
-                InputStream inputStream = recurso.getInputStream();
 
-                // Se crea el objeto SendPhoto propia de la libreria de Telegram
+                // ⭐⭐ Cargar archivo correctamente dentro del JAR (Render)
+                InputStream inputStream = getClass()
+                        .getClassLoader()
+                        .getResourceAsStream("escudos/" + e.getValue());
+
+                if (inputStream == null) {
+                    enviarTexto(chatId, "No encontré el archivo del escudo: " + e.getValue());
+                    return;
+                }
+
                 SendPhoto photo = new SendPhoto();
                 photo.setChatId(String.valueOf(chatId));
                 photo.setPhoto(new InputFile(inputStream, e.getValue()));
                 photo.setCaption("Escudo de " + capitalize(e.getKey()));
 
                 execute(photo);
-            } catch (IOException | TelegramApiException ex) {
+
+            } catch (Exception ex) {
                 enviarTexto(chatId, "No pude enviar el escudo de " + capitalize(e.getKey()));
                 ex.printStackTrace();
             }
-            return; // aqui solo se envia un escudo por mensaje
+            return;
         }
     }
 }
+
 
 // Método auxiliar para capitalizar nombres
 private String capitalize(String str) {
