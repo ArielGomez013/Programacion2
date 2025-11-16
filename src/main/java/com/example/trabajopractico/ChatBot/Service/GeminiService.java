@@ -29,11 +29,14 @@ public class GeminiService {
             this.chatClient= builder.build();
     }
     public String obtencionDeRespuesta(String prompt){
+        try{
             return chatClient.prompt()
                     .system(ContextoBase)
                     .user(prompt)
                     .call()
                     .content();
+    } catch (Exception e) {
+            return "Lo siento, tuve un problema al conectarme con el servidor. Intenta de nuevo más tarde.";
+        }
     }
 }
-

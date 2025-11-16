@@ -5,6 +5,11 @@
 package com.example.trabajopractico.ChatBot.Bot;
 
 import com.example.trabajopractico.ChatBot.Service.GeminiService;
+import com.example.trabajopractico.ChatBot.Historial.HistorialDeConversacion;
+import com.example.trabajopractico.ChatBot.Historial.Usuario;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
@@ -12,61 +17,139 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-
+import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import java.util.HashMap;
+import java.util.Map;
+import org.springframework.core.io.ClassPathResource;
+import org.telegram.telegrambots.meta.api.objects.InputFile;
 /**
  *
  * @author ariel
  */
 @Component
-public class BotTelegram extends TelegramLongPollingBot{
-    
-   private final GeminiService geminiService;
-    
-    public BotTelegram(GeminiService geminiService){
-           this.geminiService= geminiService;
+public class BotTelegram extends TelegramLongPollingBot {
+
+    private final GeminiService geminiService;
+    private final Usuario userStorage;
+    private final HistorialDeConversacion historialStorage;
+
+    // Marca si un chat está en "esperando nombre" después de /start
+    private final Map<Long, Boolean> esperandoNombre = new HashMap<>();
+
+    public BotTelegram(GeminiService geminiService, Usuario userStorage, HistorialDeConversacion historialStorage) {
+        this.geminiService = geminiService;
+        this.userStorage = userStorage;
+        this.historialStorage = historialStorage;
     }
 
     @Value("${telegram.bot.token}")
     private String botToken;
-    
+
     @Override
-    public String getBotUsername() {
-        return "EquiposDelMundoChatBot";
-    }
-    
+    public String getBotUsername() { return "EquiposDelMundoChatBot"; }
     @Override
     public String getBotToken() {
-        return botToken;
-    }
-    
+           return botToken;
+ }
 
-    //8318825232:AAGx3CqUZfvSpZ1pDz8TcDBEQulrPfvkKbA
     @Override
     public void onUpdateReceived(Update update) {
-        
-        if(update.hasMessage() && update.getMessage().hasText()){
-           String texto = update.getMessage().getText();
-           long chatId = update.getMessage().getChatId();
-           
-           String respuesta= geminiService.obtencionDeRespuesta(texto);
-           
-           SendMessage message= new SendMessage();
-           message.setChatId(String.valueOf(chatId));
-           message.setText(respuesta);
-        
-        
-        
-            try {
-                execute(message); 
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
+        if (update.hasMessage() && update.getMessage().hasText()) {
+            String texto = update.getMessage().getText().trim();
+            long chatId = update.getMessage().getChatId();
+
+            // Guardamos en historial lo que escribe el usuario
+            historialStorage.agregar(chatId, "Usuario: " + texto);
+
+            // /start -> pedimos nombre
+            if (texto.equalsIgnoreCase("/start")) {
+                esperandoNombre.put(chatId, true);
+                enviarTexto(chatId, "Hola, soy un bot que habla sobre equipos del mundo\n¿Cuál es tu nombre?");
+                return;
             }
-    }
+
+            // Si estamos esperando el nombre, guardamos en usuarios
+            if (esperandoNombre.getOrDefault(chatId, false)) {
+                userStorage.guardarUsuario(chatId, texto);
+                esperandoNombre.put(chatId, false);
+                enviarTexto(chatId, "Encantado, " + texto + "! Preguntame por equipos o países.");
+                return;
+            }
+
+            // Envío de escudo si se lo menciona
+            enviarEscudoSiCorresponde(chatId, texto);
+
+            // Se llamaa Gemini
+            String respuesta = geminiService.obtencionDeRespuesta(texto);
+
+            // Guarda la respuesta en el historial
+            historialStorage.agregar(chatId, "Bot: " + respuesta);
+
+            // Si conocemos el nombre lo anteponemos
+            String nombre = userStorage.obtenerUsuario(chatId);
+            String salida = nombre.isEmpty() ? respuesta : (nombre + ", " + respuesta);
+
+            enviarTexto(chatId, salida);
+        }
     }
 
+    // Método auxiliar para mandar texto
+    private void enviarTexto(long chatId, String texto) {
+        SendMessage m = new SendMessage();
+        m.setChatId(String.valueOf(chatId));
+        m.setText(texto);
+        try {
+            execute(m); 
+        }
+        catch (TelegramApiException e) {
+            e.printStackTrace(); 
+        }
+    }
+
+    private void enviarEscudoSiCorresponde(long chatId, String texto) {
+    // Mapa de equipos → nombre del archivo PNG en resources/escudos/
+    Map<String, String> escudos = Map.of(
+        "real madrid", "realmadrid.png",
+        "barcelona", "barcelona.png",
+        "manchester united", "manchesterunited.png",
+        "juventus", "juventus.png",
+        "boca juniors", "boca.png",
+        "river plate", "river.png",
+        "psg", "psg.png"
+    );
+
+    String textoLower = texto.toLowerCase();
+
+    for (Map.Entry<String, String> e : escudos.entrySet()) {
+        if (textoLower.contains(e.getKey())) {
+            try {
+                // Se lee la imagen desde resources/escudos/
+                ClassPathResource recurso = new ClassPathResource("escudos/" + e.getValue());
+                InputStream inputStream = recurso.getInputStream();
+
+                // Se crea el objeto SendPhoto propia de la libreria de Telegram
+                SendPhoto photo = new SendPhoto();
+                photo.setChatId(String.valueOf(chatId));
+                photo.setPhoto(new InputFile(inputStream, e.getValue()));
+                photo.setCaption("Escudo de " + capitalize(e.getKey()));
+
+                execute(photo);
+            } catch (IOException | TelegramApiException ex) {
+                enviarTexto(chatId, "No pude enviar el escudo de " + capitalize(e.getKey()));
+                ex.printStackTrace();
+            }
+            return; // aqui solo se envia un escudo por mensaje
+        }
+    }
 }
 
-    
-    
-    
- 
+// Método auxiliar para capitalizar nombres
+private String capitalize(String str) {
+    String[] palabras = str.split(" ");
+    StringBuilder sb = new StringBuilder();
+    for (String p : palabras) {
+        sb.append(p.substring(0, 1).toUpperCase()).append(p.substring(1)).append(" ");
+    }
+    return sb.toString().trim();
+}
+}

@@ -22,10 +22,12 @@ public class ChatController {
     }
 
     @GetMapping("/chat")
-    public String chat(@RequestParam(defaultValue = "Hola, ¿cómo estás?, soy un analista de los mejores equipos del mundo") String mensaje) {
-        return geminiService.obtencionDeRespuesta(mensaje);
+    public String chat(@RequestParam(required = false) String mensaje) {
+    if (mensaje == null || mensaje.isBlank()) {
+        mensaje = "Hola, ¿cómo estás?, soy un analista de los mejores equipos del mundo";
     }
-
+    return geminiService.obtencionDeRespuesta(mensaje);
+}
 }
     
 
