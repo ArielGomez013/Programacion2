@@ -7,12 +7,12 @@ package com.example.trabajopractico.ChatBot.Bot;
 import com.example.trabajopractico.ChatBot.Service.GeminiService;
 import com.example.trabajopractico.ChatBot.Historial.HistorialDeConversacion;
 import com.example.trabajopractico.ChatBot.Historial.Usuario;
-import java.io.IOException;
+//import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
+//import java.net.URL;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
+//import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -20,7 +20,7 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import java.util.HashMap;
 import java.util.Map;
-import org.springframework.core.io.ClassPathResource;
+//import org.springframework.core.io.ClassPathResource;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 /**
  *
@@ -141,7 +141,7 @@ public class BotTelegram extends TelegramLongPollingBot {
 
                 execute(photo);
 
-            } catch (Exception ex) {
+            } catch (TelegramApiException ex) {
                 enviarTexto(chatId, "No pude enviar el escudo de " + capitalize(e.getKey()));
                 ex.printStackTrace();
             }
