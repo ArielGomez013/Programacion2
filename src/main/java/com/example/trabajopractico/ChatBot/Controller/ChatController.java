@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * @author ariel
  */
+@RestController
 public class ChatController {
     
      private final GeminiService geminiService;
