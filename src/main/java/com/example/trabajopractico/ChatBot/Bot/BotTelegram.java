@@ -9,9 +9,11 @@ import com.example.trabajopractico.ChatBot.Historial.HistorialDeConversacion;
 import com.example.trabajopractico.ChatBot.Historial.Usuario;
 import java.io.File;
 //import java.io.FileOutputStream;
+import java.io.ByteArrayInputStream; // Necesitas este import
+import java.io.IOException;
+import org.springframework.util.StreamUtils; // Necesitas este import si no lo tienes
 import java.nio.file.Files;
 import java.io.IOException;
-//import java.io.IOException;
 import java.io.InputStream;
 //import java.net.URL;
 import org.springframework.beans.factory.annotation.Value;
@@ -128,51 +130,48 @@ public class BotTelegram extends TelegramLongPollingBot {
     for (Map.Entry<String, String> e : escudos.entrySet()) {
         if (textoLower.contains(e.getKey())) {
             
-            // 1. Intentamos leer el recurso desde dentro del JAR
+            // Usamos try-with-resources para el InputStream
             try (InputStream inputStream = getClass().getClassLoader()
                     .getResourceAsStream("escudos/" + e.getValue())) {
 
                 if (inputStream == null) {
-                    enviarTexto(chatId, "❌ Error interno: No se encontró el archivo del escudo: " + e.getValue());
+                    enviarTexto(chatId, "❌ No se encontró el recurso del escudo dentro del JAR.");
                     return;
                 }
                 
-                // 2. Creamos un archivo temporal para subirlo a Telegram
-                // Esto es crucial para que la librería de Telegram pueda acceder al contenido completo.
-                // Usamos el API de Files para una copia más robusta
-                File tempFile = File.createTempFile("telegram-photo-", ".png");
-                tempFile.deleteOnExit(); // Se borra cuando la JVM finaliza
+                // 1. Cargar todo el contenido del InputStream a un array de bytes
+                byte[] fileContent = StreamUtils.copyToByteArray(inputStream);
+                
+                // 2. Crear un nuevo InputStream a partir del array de bytes (en memoria)
+                // Esto permite que Telegram lea el contenido sin depender del disco
+                ByteArrayInputStream bais = new ByteArrayInputStream(fileContent);
 
-                // Copiamos el contenido del InputStream al archivo temporal
-                java.nio.file.Files.copy(inputStream, tempFile.toPath(), 
-                                         java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-
-                // 3. Preparamos el mensaje SendPhoto
+                // 3. Preparar el mensaje SendPhoto
                 SendPhoto photo = new SendPhoto();
                 photo.setChatId(String.valueOf(chatId));
-                // Usamos el constructor de InputFile con el archivo temporal
-                photo.setPhoto(new InputFile(tempFile, e.getValue())); 
+                // Usamos el constructor de InputFile con el nuevo stream en memoria
+                photo.setPhoto(new InputFile(bais, e.getValue())); 
                 photo.setCaption("Escudo de " + capitalize(e.getKey()));
 
                 // 4. Enviamos la foto
                 execute(photo);
-
-                // 5. Borramos el archivo inmediatamente después de enviarlo para limpiar el disco
-                tempFile.delete(); 
+                
+                // Cerramos el ByteArrayInputStream (aunque se cierra al salir del try, es buena práctica)
+                bais.close();
 
             } catch (TelegramApiException ex) {
-                // Error al comunicarse con Telegram
-                enviarTexto(chatId, "⚠️ Hubo un error al enviar el escudo de " + capitalize(e.getKey()) + " a Telegram.");
+                enviarTexto(chatId, "⚠️ Error de Telegram al subir el escudo de " + capitalize(e.getKey()) + ".");
                 ex.printStackTrace();
             } catch (IOException ex) {
-                // Error al crear el archivo temporal o al leer el recurso
-                enviarTexto(chatId, "⚠️ Error de I/O al manejar el archivo del escudo: " + capitalize(e.getKey()));
+                enviarTexto(chatId, "⚠️ Error de I/O al cargar el recurso a memoria: " + capitalize(e.getKey()));
                 ex.printStackTrace();
             }
             return;
         }
     }
 }
+
+    
 /*
     String textoLower = texto.toLowerCase();
 
