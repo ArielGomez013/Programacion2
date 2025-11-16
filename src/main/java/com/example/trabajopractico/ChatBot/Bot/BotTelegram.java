@@ -120,7 +120,51 @@ public class BotTelegram extends TelegramLongPollingBot {
         "river plate", "river.png",
         "psg", "psg.png"
     );
+    String textoLower = texto.toLowerCase();
 
+
+for (Map.Entry<String, String> e : escudos.entrySet()) {
+if (textoLower.contains(e.getKey())) {
+// Usa un try-with-resources para asegurar el cierre de recursos
+try (InputStream inputStream = getClass()
+.getClassLoader()
+.getResourceAsStream("escudos/" + e.getValue())) {
+
+if (inputStream == null) {
+enviarTexto(chatId, "No encontré el archivo del escudo: " + e.getValue());
+return;
+}
+
+// 1. Crea un archivo temporal para escribir el contenido
+File tempFile = File.createTempFile("telegram-photo-", ".png");
+tempFile.deleteOnExit(); // Asegura que se borre al salir
+
+// 2. Copia el contenido del stream al archivo temporal
+try (FileOutputStream outputStream = new FileOutputStream(tempFile)) {
+inputStream.transferTo(outputStream); // Utiliza Java 9+ transferTo
+}
+
+// 3. Usa el archivo temporal para InputFile
+SendPhoto photo = new SendPhoto();
+photo.setChatId(String.valueOf(chatId));
+// Ahora usamos el constructor con File:
+photo.setPhoto(new InputFile(tempFile, e.getValue())); 
+photo.setCaption("Escudo de " + capitalize(e.getKey()));
+
+execute(photo);
+
+// 4. Borra el archivo temporal inmediatamente después de enviar
+tempFile.delete(); 
+
+} catch (TelegramApiException | IOException ex) {
+enviarTexto(chatId, "No pude enviar el escudo de " + capitalize(e.getKey()) + ". Error de E/S o Telegram.");
+ex.printStackTrace();
+}
+               return;
+}
+ }
+}
+/*
     String textoLower = texto.toLowerCase();
 
     for (Map.Entry<String, String> e : escudos.entrySet()) {
@@ -152,7 +196,7 @@ public class BotTelegram extends TelegramLongPollingBot {
         }
     }
 }
-
+*/
 
 // Método auxiliar para capitalizar nombres
 private String capitalize(String str) {
