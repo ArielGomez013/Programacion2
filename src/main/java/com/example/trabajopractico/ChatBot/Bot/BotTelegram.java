@@ -7,6 +7,9 @@ package com.example.trabajopractico.ChatBot.Bot;
 import com.example.trabajopractico.ChatBot.Service.GeminiService;
 import com.example.trabajopractico.ChatBot.Historial.HistorialDeConversacion;
 import com.example.trabajopractico.ChatBot.Historial.Usuario;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 //import java.io.IOException;
 import java.io.InputStream;
 //import java.net.URL;
@@ -117,8 +120,51 @@ public class BotTelegram extends TelegramLongPollingBot {
         "river plate", "river.png",
         "psg", "psg.png"
     );
+String textoLower = texto.toLowerCase();
 
-    String textoLower = texto.toLowerCase();
+    for (Map.Entry<String, String> e : escudos.entrySet()) {
+        if (textoLower.contains(e.getKey())) {
+            try {
+                // ⭐ Cargar archivo dentro del JAR
+                InputStream inputStream = getClass()
+                        .getClassLoader()
+                        .getResourceAsStream("escudos/" + e.getValue());
+
+                if (inputStream == null) {
+                    enviarTexto(chatId, "No encontré el archivo del escudo: " + e.getValue());
+                    return;
+                }
+
+                // 🔥 Crear archivo temporal
+                File tempFile = File.createTempFile("escudo_", ".png");
+                tempFile.deleteOnExit();
+
+                // Copiar el stream al archivo temporal
+                try (FileOutputStream out = new FileOutputStream(tempFile)) {
+                    inputStream.transferTo(out);
+                }
+
+                // Enviar la foto usando archivo temporal
+                SendPhoto photo = new SendPhoto();
+                photo.setChatId(String.valueOf(chatId));
+                photo.setPhoto(new InputFile(tempFile));
+                photo.setCaption("Escudo de " + capitalize(e.getKey()));
+
+                execute(photo);
+
+            } catch (TelegramApiException ex) {
+                enviarTexto(chatId, "No pude enviar el escudo de " + capitalize(e.getKey()));
+                ex.printStackTrace();
+            } catch (IOException ioEx) {
+                enviarTexto(chatId, "Error al procesar la imagen de " + capitalize(e.getKey()));
+                ioEx.printStackTrace();
+            }
+
+            return; // solo enviar un escudo por mensaje
+        }
+    }
+}
+  /*  String textoLower = texto.toLowerCase();
 
     for (Map.Entry<String, String> e : escudos.entrySet()) {
         if (textoLower.contains(e.getKey())) {
@@ -149,7 +195,7 @@ public class BotTelegram extends TelegramLongPollingBot {
         }
     }
 }
-
+*/
 
 // Método auxiliar para capitalizar nombres
 private String capitalize(String str) {
