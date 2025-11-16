@@ -132,7 +132,7 @@ public class BotTelegram extends TelegramLongPollingBot {
             
             // Usamos try-with-resources para el InputStream
             try (InputStream inputStream = getClass().getClassLoader()
-                    .getResourceAsStream("escudos/" + e.getValue())) {
+                    .getResourceAsStream("/escudos/" + e.getValue())) {
 
                 if (inputStream == null) {
                     enviarTexto(chatId, "❌ No se encontró el recurso del escudo dentro del JAR.");
