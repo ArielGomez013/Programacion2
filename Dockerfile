@@ -8,7 +8,7 @@ COPY src ./src
 
 RUN apk add --no-cache maven 
 
-Run mvn -q -e -B package
+RUN mvn -q -e -B package 
 # Etapa final
 
 EXPOSE 8080
