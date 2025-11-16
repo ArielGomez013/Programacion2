@@ -123,46 +123,54 @@ public class BotTelegram extends TelegramLongPollingBot {
     String textoLower = texto.toLowerCase();
 
 
-for (Map.Entry<String, String> e : escudos.entrySet()) {
-if (textoLower.contains(e.getKey())) {
-// Usa un try-with-resources para asegurar el cierre de recursos
-try (InputStream inputStream = getClass()
-.getClassLoader()
-.getResourceAsStream("escudos/" + e.getValue())) {
 
-if (inputStream == null) {
-enviarTexto(chatId, "No encontré el archivo del escudo: " + e.getValue());
-return;
-}
+    for (Map.Entry<String, String> e : escudos.entrySet()) {
+        if (textoLower.contains(e.getKey())) {
+            
+            // 1. Intentamos leer el recurso desde dentro del JAR
+            try (InputStream inputStream = getClass().getClassLoader()
+                    .getResourceAsStream("escudos/" + e.getValue())) {
 
-// 1. Crea un archivo temporal para escribir el contenido
-File tempFile = File.createTempFile("telegram-photo-", ".png");
-tempFile.deleteOnExit(); // Asegura que se borre al salir
+                if (inputStream == null) {
+                    enviarTexto(chatId, "❌ Error interno: No se encontró el archivo del escudo: " + e.getValue());
+                    return;
+                }
+                
+                // 2. Creamos un archivo temporal para subirlo a Telegram
+                // Esto es crucial para que la librería de Telegram pueda acceder al contenido completo.
+                // Usamos el API de Files para una copia más robusta
+                File tempFile = File.createTempFile("telegram-photo-", ".png");
+                tempFile.deleteOnExit(); // Se borra cuando la JVM finaliza
 
-// 2. Copia el contenido del stream al archivo temporal
-try (FileOutputStream outputStream = new FileOutputStream(tempFile)) {
-inputStream.transferTo(outputStream); // Utiliza Java 9+ transferTo
-}
+                // Copiamos el contenido del InputStream al archivo temporal
+                java.nio.file.Files.copy(inputStream, tempFile.toPath(), 
+                                         java.nio.file.StandardCopyOption.REPLACE_EXISTING);
 
-// 3. Usa el archivo temporal para InputFile
-SendPhoto photo = new SendPhoto();
-photo.setChatId(String.valueOf(chatId));
-// Ahora usamos el constructor con File:
-photo.setPhoto(new InputFile(tempFile, e.getValue())); 
-photo.setCaption("Escudo de " + capitalize(e.getKey()));
+                // 3. Preparamos el mensaje SendPhoto
+                SendPhoto photo = new SendPhoto();
+                photo.setChatId(String.valueOf(chatId));
+                // Usamos el constructor de InputFile con el archivo temporal
+                photo.setPhoto(new InputFile(tempFile, e.getValue())); 
+                photo.setCaption("Escudo de " + capitalize(e.getKey()));
 
-execute(photo);
+                // 4. Enviamos la foto
+                execute(photo);
 
-// 4. Borra el archivo temporal inmediatamente después de enviar
-tempFile.delete(); 
+                // 5. Borramos el archivo inmediatamente después de enviarlo para limpiar el disco
+                tempFile.delete(); 
 
-} catch (TelegramApiException | IOException ex) {
-enviarTexto(chatId, "No pude enviar el escudo de " + capitalize(e.getKey()) + ". Error de E/S o Telegram.");
-ex.printStackTrace();
-}
-               return;
-}
- }
+            } catch (TelegramApiException ex) {
+                // Error al comunicarse con Telegram
+                enviarTexto(chatId, "⚠️ Hubo un error al enviar el escudo de " + capitalize(e.getKey()) + " a Telegram.");
+                ex.printStackTrace();
+            } catch (IOException ex) {
+                // Error al crear el archivo temporal o al leer el recurso
+                enviarTexto(chatId, "⚠️ Error de I/O al manejar el archivo del escudo: " + capitalize(e.getKey()));
+                ex.printStackTrace();
+            }
+            return;
+        }
+    }
 }
 /*
     String textoLower = texto.toLowerCase();
