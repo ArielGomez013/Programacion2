@@ -11,6 +11,7 @@ import com.example.trabajopractico.ChatBot.Service.JugadoresService;
 import java.io.File;
 //import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 //import java.net.URL;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -135,29 +136,25 @@ public class BotTelegram extends TelegramLongPollingBot {
     String textoLower = texto.toLowerCase();
 
 
-        for (Map.Entry<String, String> e : escudos.entrySet()) {
+           for (Map.Entry<String, String> e : escudos.entrySet()) {
             if (textoLower.contains(e.getKey())) {
                 
                 try {
-                    //Obtener el recurso del sistema de archivos
                     ClassPathResource resource = new ClassPathResource("escudos/" + e.getValue());
-                    
-                    if (!resource.exists()) {
-                        enviarTexto(chatId, "No se encontró el archivo del escudo: " + e.getValue());
-                        return;
-                    }
-                    
-                    // Obtener el archivo
-                    File file = resource.getFile();
 
-                    SendPhoto photo = new SendPhoto();
-                    photo.setChatId(String.valueOf(chatId));
-                    // Usa el constructor de InputFile con el objeto File
-                    photo.setPhoto(new InputFile(file, e.getValue()));
-                    photo.setCaption("Escudo de " + capitalize(e.getKey()));
+            if (!resource.exists()) {
+            enviarTexto(chatId, "No se encontró el archivo del escudo: " + e.getValue());
+            return;
+            }
 
-                    // Envia la foto
-                    execute(photo);
+            InputStream inputStream = resource.getInputStream();
+
+            SendPhoto photo = new SendPhoto();
+            photo.setChatId(String.valueOf(chatId));
+            photo.setPhoto(new InputFile(inputStream, e.getValue()));
+            photo.setCaption("Escudo de " + capitalize(e.getKey()));
+
+            execute(photo);
 
                 } catch (TelegramApiException ex) {
                     enviarTexto(chatId, "Error de Telegram al subir el escudo de " + capitalize(e.getKey()) + ".");
