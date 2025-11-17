@@ -7,6 +7,7 @@ package com.example.trabajopractico.ChatBot.Service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,11 +29,28 @@ public class JugadoresService {
 
     private void cargarJson() {
         try {
-            File f = new File("jugadores.json");
-            equipos = mapper.readValue(f, new TypeReference<Map<String, Map<String, List<String>>>>(){});
+            // Cargar desde src/main/resources/
+            
+            
+            
+            InputStream input = getClass()
+                    .getClassLoader()
+                    .getResourceAsStream("jugadores.json");
+
+            if (input == null) {
+                System.out.println("jugadores.json NO encontrado en resources");
+                equipos = new HashMap<>();
+                return;
+            }
+
+            equipos = mapper.readValue(
+                    input,
+                    new TypeReference<Map<String, Map<String, List<String>>>>(){}
+            );
+
         } catch (Exception e) {
+            System.out.println("Error al cargar jugadores.json: " + e.getMessage());
             equipos = new HashMap<>();
-            System.out.println("No se pudo cargar jugadores.json");
         }
     }
 
