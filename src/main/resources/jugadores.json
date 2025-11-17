@@ -1,0 +1,21 @@
+{
+  "real madrid": {
+    "jugadores": [
+      "Vinícius Jr",
+      "Jude Bellingham",
+      "Luka Modrić",
+      "Rodrygo",
+      "Antonio Rüdiger"
+    ]
+  },
+
+  "barcelona": {
+    "jugadores": [
+      "Pedri",
+      "Gavi",
+      "Robert Lewandowski",
+      "Raphinha",
+      "Ronald Araújo"
+    ]
+  }
+}

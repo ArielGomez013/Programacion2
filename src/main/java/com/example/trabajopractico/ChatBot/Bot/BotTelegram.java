@@ -7,6 +7,7 @@ package com.example.trabajopractico.ChatBot.Bot;
 import com.example.trabajopractico.ChatBot.Service.GeminiService;
 import com.example.trabajopractico.ChatBot.Historial.HistorialDeConversacion;
 import com.example.trabajopractico.ChatBot.Historial.Usuario;
+import com.example.trabajopractico.ChatBot.Service.JugadoresService;
 import java.io.File;
 //import java.io.FileOutputStream;
 import java.io.IOException;
@@ -19,6 +20,7 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.springframework.core.io.ClassPathResource;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
@@ -32,14 +34,16 @@ public class BotTelegram extends TelegramLongPollingBot {
     private final GeminiService geminiService;
     private final Usuario userStorage;
     private final HistorialDeConversacion historialStorage;
+    private final JugadoresService jugadoresStorage;
 
     // Marca si un chat está en "esperando nombre" después de /start
     private final Map<Long, Boolean> esperandoNombre = new HashMap<>();
 
-    public BotTelegram(GeminiService geminiService, Usuario userStorage, HistorialDeConversacion historialStorage) {
+    public BotTelegram(GeminiService geminiService, Usuario userStorage, HistorialDeConversacion historialStorage, JugadoresService jugadoresStorage) {
         this.geminiService = geminiService;
         this.userStorage = userStorage;
         this.historialStorage = historialStorage;
+        this.jugadoresStorage = jugadoresStorage;
     }
 
     @Value("${telegram.bot.token}")
@@ -58,7 +62,7 @@ public class BotTelegram extends TelegramLongPollingBot {
             String texto = update.getMessage().getText().trim();
             long chatId = update.getMessage().getChatId();
 
-            // Guardamos en historial lo que escribe el usuario
+            // Se guarda en el historial lo que escribe el usuario
             historialStorage.agregar(chatId, "Usuario: " + texto);
 
             // /start -> pedimos nombre
@@ -68,7 +72,7 @@ public class BotTelegram extends TelegramLongPollingBot {
                 return;
             }
 
-            // Si estamos esperando el nombre, guardamos en usuarios
+            // Se guarda en usuarios
             if (esperandoNombre.getOrDefault(chatId, false)) {
                 userStorage.guardarUsuario(chatId, texto);
                 esperandoNombre.put(chatId, false);
@@ -78,6 +82,17 @@ public class BotTelegram extends TelegramLongPollingBot {
 
             // Envío de escudo si se lo menciona
             enviarEscudoSiCorresponde(chatId, texto);
+            
+            List<String> jugadores = jugadoresStorage.getJugadores(texto.toLowerCase());
+
+            if (jugadores != null) {
+            String respuesta = "Los jugadores principales de " + texto + " son:\n- " 
+            + String.join("\n- ", jugadores);
+
+            historialStorage.agregar(chatId, "Bot: " + respuesta);
+            enviarTexto(chatId, respuesta);
+            return;
+}
 
             // Se llamaa Gemini
             String respuesta = geminiService.obtencionDeRespuesta(texto);
@@ -107,7 +122,7 @@ public class BotTelegram extends TelegramLongPollingBot {
     }
 
     private void enviarEscudoSiCorresponde(long chatId, String texto) {
-    // Mapa de equipos → nombre del archivo PNG en resources/escudos/
+    // Mapa de equipos
     Map<String, String> escudos = Map.of(
         "real madrid", "realmadrid.png",
         "barcelona", "barcelona.png",
@@ -124,7 +139,7 @@ public class BotTelegram extends TelegramLongPollingBot {
             if (textoLower.contains(e.getKey())) {
                 
                 try {
-                    //Obtener el recurso del sistema de archivos o classpath
+                    //Obtener el recurso del sistema de archivos
                     ClassPathResource resource = new ClassPathResource("escudos/" + e.getValue());
                     
                     if (!resource.exists()) {
@@ -156,41 +171,6 @@ public class BotTelegram extends TelegramLongPollingBot {
         }
     }
     
-/*
-    String textoLower = texto.toLowerCase();
-
-    for (Map.Entry<String, String> e : escudos.entrySet()) {
-        if (textoLower.contains(e.getKey())) {
-            try {
-
-                // ⭐⭐ Cargar archivo correctamente dentro del JAR (Render)
-                InputStream inputStream = getClass()
-                        .getClassLoader()
-                        .getResourceAsStream("escudos/" + e.getValue());
-
-                if (inputStream == null) {
-                    enviarTexto(chatId, "No encontré el archivo del escudo: " + e.getValue());
-                    return;
-                }
-
-                SendPhoto photo = new SendPhoto();
-                photo.setChatId(String.valueOf(chatId));
-                photo.setPhoto(new InputFile(inputStream, e.getValue()));
-                photo.setCaption("Escudo de " + capitalize(e.getKey()));
-
-                execute(photo);
-
-            } catch (TelegramApiException ex) {
-                enviarTexto(chatId, "No pude enviar el escudo de " + capitalize(e.getKey()));
-                ex.printStackTrace();
-            }
-            return;
-        }
-    }
-}
-*/
-
-// Método auxiliar para capitalizar nombres
 private String capitalize(String str) {
     String[] palabras = str.split(" ");
     StringBuilder sb = new StringBuilder();

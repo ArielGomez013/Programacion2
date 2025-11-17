@@ -21,9 +21,8 @@ public class GeminiService {
     mejores equipos de ese pais con los detalles que te acabo de decir.
     Solo vas a contestar eso, si el usuario te dice otra cosa que no este
     relacionado con equipos del futbol, le decis que de eso no hablas,
-    que hablas solo de equipos de futbol.                                        
+    que hablas solo de equipos de futbol.                       
     """;
-    
     
     public GeminiService(ChatClient.Builder builder){
             this.chatClient= builder.build();
