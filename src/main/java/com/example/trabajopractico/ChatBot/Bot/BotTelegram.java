@@ -13,7 +13,6 @@ import java.io.IOException;
 //import java.net.URL;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-//import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -22,7 +21,6 @@ import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import java.util.HashMap;
 import java.util.Map;
 import org.springframework.core.io.ClassPathResource;
-//import org.springframework.core.io.ClassPathResource;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 /**
  *

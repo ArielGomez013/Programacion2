@@ -24,11 +24,18 @@ public class ChatController {
 
     @GetMapping("/chat")
     public String chat(@RequestParam(required = false) String mensaje) {
-    if (mensaje == null || mensaje.isBlank()) {
-        mensaje = "Hola, ¿cómo estás?, soy un analista de los mejores equipos del mundo";
+    String saludoBot = "Hola, soy un analista de los mejores equipos del mundo. ";
+
+        // Si no mandan mensaje, usa un mensaje por defecto
+        if (mensaje == null || mensaje.isBlank()) {
+            mensaje = "¿En qué puedo ayudarte hoy?";
+        }
+
+        // Agrega el saludo ANTES del mensaje del usuario
+        String mensajeFinal = saludoBot + mensaje;
+
+        return geminiService.obtencionDeRespuesta(mensajeFinal);
     }
-    return geminiService.obtencionDeRespuesta(mensaje);
-}
 }
     
 
