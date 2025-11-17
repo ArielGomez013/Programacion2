@@ -96,8 +96,12 @@ public class BotTelegram extends TelegramLongPollingBot {
 }
 
             // Se llamaa Gemini
-            String respuesta = geminiService.obtencionDeRespuesta(texto);
-
+            String respuesta;
+            try {
+            respuesta = geminiService.obtencionDeRespuesta(texto);
+            } catch (Exception e) {
+            respuesta = "El servidor está saturado ahora mismo. Probá de nuevo en unos segundos.";
+            }
             // Guarda la respuesta en el historial
             historialStorage.agregar(chatId, "Bot: " + respuesta);
 
